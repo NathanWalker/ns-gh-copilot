@@ -1,0 +1,198 @@
+<GridLayout rows="auto, *, auto" class="bg-slate-100 dark:bg-slate-900">
+  <GridLayout
+    row="0"
+    columns="*, auto"
+    class="bg-slate-800 dark:bg-slate-900 p-4 shadow-md"
+  >
+    <GridLayout rows="auto" columns="auto,*">
+      <Image
+        src="~/assets/gh-emoji.png"
+        width="32"
+        height="32"
+        class="mr-3"
+      ></Image>
+      <StackLayout col="1">
+        <Label text="Assistant" class="text-white text-xl font-bold"></Label>
+        <Label
+          text="GitHub Copilot × nstreamdown"
+          class="text-blue-100 text-xs"
+        ></Label>
+      </StackLayout>
+    </GridLayout>
+  </GridLayout>
+
+  <!-- Messages Area -->
+  <ScrollView
+    row="1"
+    #scrollView
+    class="p-4"
+    (loaded)="onScrollViewLoaded($event)"
+  >
+    <StackLayout (tap)="tapCloseKeyboard()">
+      @if (isLoading() && messages().length === 0) {
+        <StackLayout
+          class="bg-white dark:bg-slate-800 rounded-lg p-6 mb-4 shadow-sm"
+        >
+          <Label
+            text="🔄 Initializing GitHub Copilot..."
+            class="text-center text-slate-600 dark:text-slate-300"
+          ></Label>
+        </StackLayout>
+      }
+
+      @for (message of messages(); track message.id) {
+        <!-- User Message -->
+        @if (message.role === "user") {
+          <GridLayout columns="*, auto" class="mb-3">
+            <StackLayout
+              col="1"
+              class="bg-blue-600 dark:bg-blue-700 rounded-2xl rounded-br-sm py-3 px-4 max-w-[280] shadow-sm"
+            >
+              <Label
+                [text]="message.content"
+                class="text-white text-sm leading-[3]"
+                textWrap="true"
+              ></Label>
+            </StackLayout>
+          </GridLayout>
+        }
+
+        <!-- Assistant Message -->
+        @if (message.role === "assistant" && message.content) {
+          <GridLayout columns="32, *" class="mb-4">
+            <!-- Avatar -->
+            <GridLayout
+              col="0"
+              rows="32"
+              columns="32"
+              class="mr-2 h-[32] w-[32]"
+            >
+              <Image src="~/assets/gh-emoji.png" width="22" height="22"></Image>
+            </GridLayout>
+
+            <!-- Message Bubble -->
+            <StackLayout
+              col="1"
+              class="bg-white dark:bg-slate-800 rounded-2xl rounded-tl-sm p-4 shadow-md"
+            >
+              <Streamdown
+                [content]="message.content"
+                [config]="getMessageConfig(message)"
+              ></Streamdown>
+
+              @if (message.isStreaming) {
+                <Label
+                  text="●"
+                  class="text-blue-600 dark:text-blue-400 animate-pulse mt-2"
+                ></Label>
+              }
+            </StackLayout>
+          </GridLayout>
+        }
+      }
+
+      <!-- Loading Indicator with Shimmer -->
+      @if (isLoading() && messages().length > 0) {
+        <GridLayout columns="32, *" class="mb-4">
+          <GridLayout
+            col="0"
+            rows="32"
+            columns="32"
+            class="bg-gradient-to-br from-purple-600 to-blue-600 rounded-full mr-2 h-[32] w-[32]"
+          >
+            <Label text="🤖" class="text-white text-lg text-center"></Label>
+          </GridLayout>
+          <StackLayout
+            col="1"
+            class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-md"
+          >
+            <Shimmer>
+              <StackLayout>
+                <Label
+                  text="Working..."
+                  class="text-slate-500 dark:text-slate-400 text-sm mb-2"
+                ></Label>
+                <ContentView
+                  height="12"
+                  width="85%"
+                  class="bg-slate-300 dark:bg-slate-600 rounded-md mb-2 h-left"
+                ></ContentView>
+                <ContentView
+                  height="12"
+                  width="70%"
+                  class="bg-slate-300 dark:bg-slate-600 rounded-md mb-2 h-left"
+                ></ContentView>
+                <ContentView
+                  height="12"
+                  width="60%"
+                  class="bg-slate-300 dark:bg-slate-600 rounded-md h-left"
+                ></ContentView>
+              </StackLayout>
+            </Shimmer>
+          </StackLayout>
+        </GridLayout>
+      }
+
+      <!-- Quick Actions (only show when no messages or just welcome) -->
+      @if (messages().length <= 1 && isInitialized()) {
+        <StackLayout class="mt-4 pl-4">
+          <Label
+            text="Quick Actions:"
+            class="text-slate-600 dark:text-slate-300 font-semibold mb-2"
+          ></Label>
+          <WrapLayout>
+            @for (quickPrompt of quickPrompts; track quickPrompt.text) {
+              <Button
+                [text]="quickPrompt.text"
+                class="bg-blue-500 text-white rounded-full px-4 py-2 m-1 text-xs"
+                (tap)="onQuickPrompt(quickPrompt.prompt)"
+              >
+              </Button>
+            }
+          </WrapLayout>
+        </StackLayout>
+      }
+    </StackLayout>
+  </ScrollView>
+
+  <!-- Input Area for inputAccessoryView -->
+  <GridLayout
+    #inputContainer
+    row="2"
+    rows="*"
+    columns="auto,*,auto"
+    class="px-5 pb-2 bg-transparent"
+  >
+    <MenuImage
+      src="sys://plus"
+      [options]="addOptions"
+      (selected)="selectOption($event)"
+      class="dark:bg-slate-800/60 bg-slate-200/60 rounded-full w-10 h-10 mr-2 align-bottom"
+      iosSymbolScale="small"
+      [tintColor]="this.themeService.colors().textPrimary"
+    ></MenuImage>
+
+    <TextView
+      #messageInput
+      col="1"
+      colSpan="2"
+      [text]="inputText()"
+      (textChange)="onTextChange($event)"
+      (loaded)="onTextViewLoaded($event)"
+      hint="Ask me anything..."
+      class="bg-slate-200/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-50 pl-4 pr-8 py-4 text-base align-bottom leading-[2]"
+      [class.rounded-3xl]="isMultiLine()"
+      [class.rounded-full]="!isMultiLine()"
+    >
+    </TextView>
+
+    <Button
+      col="2"
+      [text]="isLoading() ? '⋯' : '↑'"
+      [isEnabled]="!isLoading() && inputText().length > 0"
+      class="bg-blue-600 text-white rounded-full w-8 h-8 text-xl font-bold mr-1 mb-1 align-bottom"
+      (tap)="sendMessage()"
+    >
+    </Button>
+  </GridLayout>
+</GridLayout>

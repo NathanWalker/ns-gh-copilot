@@ -4,6 +4,8 @@ Chat app built with **NativeScript**, integrating:
 - **[@github/copilot-sdk](https://github.com/github/copilot-sdk)** - GitHub's Copilot SDK for AI interactions
 - **[@nstudio/nstreamdown](https://nstreamdown.ai)** - Beautiful markdown rendering with real-time streaming support
 
+https://github.com/user-attachments/assets/9684b282-c35e-49e6-9498-52f73131ea9a
+
 ## What's Included
 
 ### Custom AI Tools

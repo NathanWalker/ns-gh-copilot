@@ -18,11 +18,12 @@ import {
   TextView,
   View,
   Page,
+  EventData,
 } from "@nativescript/core";
 import { Streamdown } from "@nstudio/nstreamdown/angular";
 import type { StreamdownConfig } from "@nstudio/nstreamdown/angular";
 import { CopilotService } from "../services/copilot.service";
-import { ThemeService } from '../services/theme.service'
+import { ThemeService } from "../services/theme.service";
 import { Subscription } from "rxjs";
 import { KeyboardAccessoryManager } from "./keyboard-accessory";
 import { MenuSelectedEvent } from "../menus";
@@ -59,62 +60,62 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewInit {
   addOptions = [
     {
       id: 1,
-      name: 'New Chat',
-      icon: 'square.and.pencil',
+      name: "New Chat",
+      icon: "square.and.pencil",
     },
     {
       id: 2,
-      name: 'Import from Drive',
-      subtitle: 'Login Required',
-      icon: 'cloud',
+      name: "Import from Drive",
+      subtitle: "Login Required",
+      icon: "cloud",
     },
     {
       id: 3,
-      name: 'Tiers',
-      icon: 'circle.dotted',
+      name: "Tiers",
+      icon: "circle.dotted",
       singleSelection: true,
       children: [
         {
           id: 31,
-          name: 'Starter',
-          subtitle: 'Lean quickstart',
+          name: "Starter",
+          subtitle: "Lean quickstart",
         },
         {
           id: 32,
-          name: 'Pro',
-          subtitle: 'Growing businesses',
+          name: "Pro",
+          subtitle: "Growing businesses",
         },
         {
           id: 33,
-          name: 'Enterprise',
-          subtitle: 'Maximum throughput',
-          state: 'on' as const,
+          name: "Enterprise",
+          subtitle: "Maximum throughput",
+          state: "on" as const,
         },
       ],
     },
     {
       id: 4,
-      name: 'Protocols',
-      icon: 'square.2.layers.3d',
+      name: "Protocols",
+      icon: "square.2.layers.3d",
       children: [
         {
           id: 41,
-          name: 'Add Protocol',
-          icon: 'plus',
+          name: "Add Protocol",
+          icon: "plus",
         },
       ],
     },
     {
       id: 5,
-      name: '',
-      childrenStyle: 'palette' as const,
+      name: "",
+      childrenStyle: "palette" as const,
       children: [
-        { id: 51, name: 'Camera', icon: 'camera' },
-        { id: 52, name: 'Photos', icon: 'photo' },
-        { id: 53, name: 'Files', icon: 'folder' },
+        { id: 51, name: "Camera", icon: "camera" },
+        { id: 52, name: "Photos", icon: "photo" },
+        { id: 53, name: "Files", icon: "folder" },
       ],
     },
-  ]
+  ];
 
   private subscriptions = new Subscription();
   private currentStreamingMessageId = "";
@@ -158,9 +159,8 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   tapCloseKeyboard() {
-    if (__APPLE__ && this.keyboardAccessoryManager) {
-      this.keyboardAccessoryManager.dismissKeyboard();
-    }
+    if (!this.keyboardAccessoryManager) return;
+    this.keyboardAccessoryManager.dismissKeyboard();
   }
 
   private setupKeyboardAccessory() {
@@ -188,7 +188,7 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewInit {
       inputContainerView,
       this.nativeScrollView,
       scrollViewView,
-      this.textView
+      this.textView,
     );
   }
 
@@ -288,22 +288,20 @@ ${error}`,
     this.copilotService.cleanup();
 
     // Clean up keyboard accessory manager
-    if (__APPLE__ && this.keyboardAccessoryManager) {
-      this.keyboardAccessoryManager.cleanup();
-    }
+    if (!this.keyboardAccessoryManager) return;
+    this.keyboardAccessoryManager.cleanup();
   }
 
-  onTextChange(args: any) {
+  onTextChange(args: EventData) {
     const textView = args.object as TextView;
     this.inputText.set(textView.text);
 
     // Trigger accessory view height update if needed
-    if (__APPLE__ && this.keyboardAccessoryManager) {
-      this.keyboardAccessoryManager.updateAccessoryHeight();
-    }
+    if (!this.keyboardAccessoryManager) return;
+    this.keyboardAccessoryManager.updateAccessoryHeight();
   }
 
-  onTextViewLoaded(args: any) {
+  onTextViewLoaded(args: EventData) {
     if (__APPLE__) {
       this.textView = args.object as TextView;
       const nativeTextView = this.textView.ios as UITextView;

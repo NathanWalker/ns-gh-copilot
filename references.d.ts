@@ -80,6 +80,8 @@ declare class KeyboardTrackingView extends UIView {
 
 	showKeyboardWithTextField(textField: UITextField): void;
 
+	setDismissingKeyboard(): void;
+
 	trackKeyboardPosition(): void;
 
 	updateHeight(newHeight: number): void;

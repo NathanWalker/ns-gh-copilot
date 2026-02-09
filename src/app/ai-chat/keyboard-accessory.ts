@@ -1,4 +1,4 @@
-import { View, TextView, Utils } from "@nativescript/core";
+import { View, TextView, Utils, ScrollView } from "@nativescript/core";
 
 /**
  * KeyboardAccessoryManager
@@ -7,9 +7,9 @@ import { View, TextView, Utils } from "@nativescript/core";
  *
  */
 export class KeyboardAccessoryManager {
-  private keyboardTrackingView: any = null;
+  private keyboardTrackingView: KeyboardTrackingView | null = null;
   private scrollView: UIScrollView | null = null;
-  private nsScrollViewContainer: View | null = null;
+  private nsScrollViewContainer: ScrollView | null = null;
   private inputContainerView: UIView | null = null;
   private nsInputContainer: View | null = null;
   private textView: TextView | null = null;
@@ -21,7 +21,7 @@ export class KeyboardAccessoryManager {
     viewController: UIViewController,
     inputContainer: View,
     scrollView: UIScrollView,
-    scrollViewView: View,
+    scrollViewView: ScrollView,
     textView: TextView
   ): void {
     this.scrollView = scrollView;
@@ -52,7 +52,7 @@ export class KeyboardAccessoryManager {
     // This makes row 2 = 0 height and prevents the parent from calling
     // _setNativeViewFrame (which would conflict with the accessory positioning).
     // We handle layout of children ourselves via relayoutAccessory().
-    (inputContainer as any).isCollapsed = true;
+    inputContainer.isCollapsed = true;
     if (inputContainer.parent) {
       inputContainer.parent.requestLayout();
     }
@@ -150,7 +150,7 @@ export class KeyboardAccessoryManager {
     try {
       // Get the content child (the StackLayout containing messages)
       // ScrollView extends ContentView which has a single 'content' child
-      const scrollViewView = this.nsScrollViewContainer as any;
+      const scrollViewView = this.nsScrollViewContainer;
       const stackLayout = scrollViewView.content;
 
       if (!stackLayout) {

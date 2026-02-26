@@ -19,6 +19,7 @@ import {
   View,
   Page,
   EventData,
+  AndroidOverflowInsetData,
 } from "@nativescript/core";
 import { Streamdown } from "@nstudio/nstreamdown/angular";
 import type { StreamdownConfig } from "@nstudio/nstreamdown/angular";
@@ -26,7 +27,7 @@ import { CopilotService } from "../services/copilot.service";
 import { ThemeService } from "../services/theme.service";
 import { Subscription } from "rxjs";
 import { KeyboardAccessoryManager } from "./keyboard-accessory";
-import { MenuSelectedEvent } from "../menus";
+import { MenuSelectedEvent } from "@nstudio/nativescript-menu";
 
 interface ChatMessage {
   id: string;
@@ -116,10 +117,11 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewInit {
       ],
     },
   ];
+  isApple = __APPLE__;
 
   private subscriptions = new Subscription();
   private currentStreamingMessageId = "";
-  private nativeScrollView: UIScrollView | null = null;
+  private nativeScrollView: any = null;
   private keyboardAccessoryManager: KeyboardAccessoryManager | null = null;
   private isAccessorySetup = false;
   private textView: TextView | null = null;
@@ -141,21 +143,61 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewInit {
   streamdownConfig: StreamdownConfig = {
     mode: "streaming",
   };
+  inset = {
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    ime: {
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+    },
+    cutout: {
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+    },
+  };
 
   constructor(
     private copilotService: CopilotService,
     private cdr: ChangeDetectorRef,
-  ) {}
+  ) {
+    this.page.actionBarHidden = true;
+    this.page.on('androidOverflowInset', (args: AndroidOverflowInsetData) => {
+      const inset = args.inset;
+
+      // store inset
+      this.inset.top = inset.top;
+      this.inset.right = inset.right;
+      this.inset.bottom = inset.bottom;
+      this.inset.left = inset.left;
+      // ime can be used to handle the opening/closing of the keyboard
+      // this.inset.ime.bottom = inset.imeBottom;
+
+      // this.inset.cutout.top = inset.cutoutTop;
+      // this.inset.cutout.right = inset.cutoutRight;
+      // this.inset.cutout.bottom = inset.cutoutBottom;
+      // this.inset.cutout.left = inset.cutoutLeft;
+
+      // Mark edges as consumed so parents do not re-apply them
+      inset.topConsumed = true;
+      inset.rightConsumed = true;
+      inset.bottomConsumed = true;
+      inset.leftConsumed = true;
+    });
+  }
 
   async ngOnInit() {
     this.initAssistant();
   }
 
   ngAfterViewInit() {
-    if (__APPLE__) {
-      // Setup keyboard handling after views are ready
-      setTimeout(() => this.setupKeyboardAccessory(), 100);
-    }
+    // Setup keyboard handling after views are ready (both platforms)
+    setTimeout(() => this.setupKeyboardAccessory(), 100);
   }
 
   tapCloseKeyboard() {
@@ -180,9 +222,12 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewInit {
 
     const inputContainerView = this.inputContainer.nativeElement as View;
     const scrollViewView = this.scrollView.nativeElement as ScrollView;
-    const viewController = this.page.viewController as UIViewController;
 
-    // Setup keyboard handling with inputAccessoryView
+    // iOS: UIViewController, Android: unused (null)
+    const viewController = __APPLE__
+      ? (this.page.viewController as UIViewController)
+      : null;
+
     this.keyboardAccessoryManager.setup(
       viewController,
       inputContainerView,
@@ -193,9 +238,11 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onScrollViewLoaded(args: any) {
+    const scrollView = args.object as ScrollView;
     if (__APPLE__) {
-      const scrollView = args.object as ScrollView;
-      this.nativeScrollView = scrollView.ios as UIScrollView;
+      this.nativeScrollView = scrollView.ios;
+    } else {
+      this.nativeScrollView = scrollView.android;
     }
   }
 
@@ -302,8 +349,9 @@ ${error}`,
   }
 
   onTextViewLoaded(args: EventData) {
+    this.textView = args.object as TextView;
+
     if (__APPLE__) {
-      this.textView = args.object as TextView;
       const nativeTextView = this.textView.ios as UITextView;
 
       // Configure for auto-growing
@@ -315,6 +363,7 @@ ${error}`,
         right: 10,
       });
     }
+    // Note: Android EditText auto-grows by default with multiline input
   }
 
   async sendMessage(customPrompt?: string) {

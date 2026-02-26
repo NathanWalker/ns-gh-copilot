@@ -1,4 +1,4 @@
-<GridLayout rows="auto, *, auto" class="bg-slate-100 dark:bg-slate-900">
+<GridLayout rows="auto, *, auto">
   <GridLayout
     row="0"
     columns="*, auto"
@@ -25,7 +25,7 @@
   <ScrollView
     row="1"
     #scrollView
-    class="p-4"
+    class="p-4 dark:bg-slate-900"
     (loaded)="onScrollViewLoaded($event)"
   >
     <StackLayout (tap)="tapCloseKeyboard()">
@@ -98,7 +98,7 @@
             col="0"
             rows="32"
             columns="32"
-            class="bg-gradient-to-br from-purple-600 to-blue-600 rounded-full mr-2 h-[32] w-[32]"
+            class="rounded-full mr-2 h-[32] w-[32]"
           >
             <Label text="🤖" class="text-white text-lg text-center"></Label>
           </GridLayout>
@@ -161,15 +161,24 @@
     row="2"
     rows="*"
     columns="auto,*,auto"
-    class="px-5 pb-2 bg-transparent"
+    class="px-5 pb-2"
+    [ngClass]="{
+      'bg-slate-100/90 dark:bg-slate-900/90': !isApple,
+      'bg-transparent': isApple,
+    }"
   >
     <MenuImage
-      src="sys://plus"
+      [src]="isApple ? 'sys://plus' : 'res://ic_add'"
       [options]="addOptions"
       (selected)="selectOption($event)"
-      class="dark:bg-slate-800/60 bg-slate-200/60 rounded-full w-10 h-10 mr-2 align-bottom"
+      class="dark:bg-slate-800/60 bg-slate-200/60 align-bottom rounded-full mr-2"
       iosSymbolScale="small"
+      androidBackgroundOpacity=".9"
       [tintColor]="this.themeService.colors().textPrimary"
+      [ngClass]="{
+        'w-10 h-10': isApple,
+        'w-[50] h-[50]': !isApple,
+      }"
     ></MenuImage>
 
     <TextView
@@ -180,19 +189,45 @@
       (textChange)="onTextChange($event)"
       (loaded)="onTextViewLoaded($event)"
       hint="Ask me anything..."
+      style.placeholderColor="#94a3b8"
       class="bg-slate-200/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-50 pl-4 pr-8 py-4 text-base align-bottom leading-[2]"
       [class.rounded-3xl]="isMultiLine()"
       [class.rounded-full]="!isMultiLine()"
     >
     </TextView>
 
-    <Button
+    <GridLayout
       col="2"
-      [text]="isLoading() ? '⋯' : '↑'"
-      [isEnabled]="!isLoading() && inputText().length > 0"
-      class="bg-blue-600 text-white rounded-full w-8 h-8 text-xl font-bold mr-1 mb-1 align-bottom"
-      (tap)="sendMessage()"
+      class="align-bottom"
+      [ngClass]="{
+        'mb-1 mr-1': isApple,
+        'mr-2': !isApple,
+      }"
     >
-    </Button>
+      @if (isApple) {
+        <Button
+          [text]="isLoading() ? '⋯' : '↑'"
+          [isEnabled]="!isLoading() && inputText().length > 0"
+          class="bg-blue-600 text-white rounded-full w-8 h-8 text-xl font-bold align-middle"
+          (tap)="sendMessage()"
+        >
+        </Button>
+      } @else {
+        <GridLayout
+          class="bg-blue-600 rounded-full align-middle"
+          [ngClass]="{
+            'w-8 h-8': isApple,
+            'w-10 h-10 mb-[5]': !isApple,
+          }"
+          (tap)="sendMessage()"
+        >
+          <Image
+            src="res://arrow_up"
+            class="w-6 h-6 align-middle"
+            tintColor="white"
+          ></Image>
+        </GridLayout>
+      }
+    </GridLayout>
   </GridLayout>
 </GridLayout>

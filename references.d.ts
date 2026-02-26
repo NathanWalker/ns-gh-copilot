@@ -1,6 +1,40 @@
 /// <reference path="./node_modules/@nativescript/types/index.d.ts" />
 /// <reference path="./node_modules/@nativescript/iqkeyboardmanager/typings/objc!IQKeyboardManager.d.ts" />
 
+// Android KeyboardAccessoryHelper typings
+declare namespace org {
+  namespace nativescript {
+    class KeyboardAccessoryHelper {
+      constructor(
+        activity: android.app.Activity,
+        inputContainer: android.view.View,
+        scrollView: android.view.View,
+        inputContainerHeight: number
+      );
+
+      setup(callback: org.nativescript.KeyboardAccessoryHelper.KeyboardStateCallback): void;
+      updateAccessoryHeight(newHeightPx: number): void;
+      dismissKeyboard(): void;
+      showKeyboard(): void;
+      scrollToBottom(): void;
+      clampScrollPosition(): void;
+      cleanup(): void;
+    }
+
+    namespace KeyboardAccessoryHelper {
+      class KeyboardStateCallback {
+        constructor(implementation: {
+          onKeyboardHeightChanged(heightPx: number, isAnimating: boolean): void;
+          onKeyboardFullyShown(heightPx: number): void;
+          onKeyboardFullyHidden(): void;
+          onRelayoutScrollContent(): void;
+        });
+      }
+    }
+  }
+}
+
+// iOS KeyboardTrackingView typings
 declare class InputAccessoryContainerView extends UIView {
 
 	static alloc(): InputAccessoryContainerView; // inherited from NSObject

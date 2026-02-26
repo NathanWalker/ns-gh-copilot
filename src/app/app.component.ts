@@ -1,6 +1,6 @@
 import { Component, NO_ERRORS_SCHEMA } from '@angular/core';
 import { PageRouterOutlet, registerElement } from '@nativescript/angular';
-import { MenuButton, MenuImage } from './menus';
+import { MenuButton, MenuImage } from '@nstudio/nativescript-menu';
 
 registerElement('MenuImage', () => MenuImage);
 registerElement('MenuButton', () => MenuButton);

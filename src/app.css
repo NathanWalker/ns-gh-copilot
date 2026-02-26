@@ -5,3 +5,7 @@
 .h-left {
     horizontal-align: left;
 }
+
+Page {
+    background-color: rgb(15 23 42);
+}

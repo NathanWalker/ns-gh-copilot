@@ -24,9 +24,9 @@ import {
 import { Streamdown } from "@nstudio/nstreamdown/angular";
 import type { StreamdownConfig } from "@nstudio/nstreamdown/angular";
 import { CopilotService } from "../services/copilot.service";
+import { AiEngine, createAiEngine } from "./ai-engine";
 import { ThemeService } from "../services/theme.service";
-import { Subscription } from "rxjs";
-import { KeyboardAccessoryManager } from "./keyboard-accessory";
+import { InputAccessoryManager } from "@nativescript/input-accessory";
 import { MenuSelectedEvent } from "@nstudio/nativescript-menu";
 
 interface ChatMessage {
@@ -51,12 +51,16 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewInit {
 
   messages = signal<ChatMessage[]>([]);
   inputText = signal("");
-  isMultiLine = computed(
+  isMultiline = computed(
     () => this.inputText().includes("\n") || this.inputText().length > 40,
   );
   isLoading = signal(false);
   isInitialized = signal(false);
   selectedModel = signal("v0-max");
+
+  // Active chat backend (GitHub Copilot or Apple Foundation Models).
+  engineName = signal("");
+
   page = inject(Page);
   addOptions = [
     {
@@ -119,10 +123,9 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewInit {
   ];
   isApple = __APPLE__;
 
-  private subscriptions = new Subscription();
+  private engine!: AiEngine;
   private currentStreamingMessageId = "";
-  private nativeScrollView: any = null;
-  private keyboardAccessoryManager: KeyboardAccessoryManager | null = null;
+  private keyboardAccessoryManager: InputAccessoryManager | null = null;
   private isAccessorySetup = false;
   private textView: TextView | null = null;
 
@@ -167,7 +170,7 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewInit {
     private cdr: ChangeDetectorRef,
   ) {
     this.page.actionBarHidden = true;
-    this.page.on('androidOverflowInset', (args: AndroidOverflowInsetData) => {
+    this.page.on("androidOverflowInset", (args: AndroidOverflowInsetData) => {
       const inset = args.inset;
 
       // store inset
@@ -210,7 +213,8 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewInit {
     if (
       !this.inputContainer?.nativeElement ||
       !this.messageInput?.nativeElement ||
-      !this.nativeScrollView
+      !this.scrollView?.nativeElement ||
+      !this.textView
     ) {
       // Views not ready yet, try again
       setTimeout(() => this.setupKeyboardAccessory(), 100);
@@ -218,32 +222,15 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     this.isAccessorySetup = true;
-    this.keyboardAccessoryManager = new KeyboardAccessoryManager();
+    this.keyboardAccessoryManager = new InputAccessoryManager();
 
-    const inputContainerView = this.inputContainer.nativeElement as View;
-    const scrollViewView = this.scrollView.nativeElement as ScrollView;
-
-    // iOS: UIViewController, Android: unused (null)
-    const viewController = __APPLE__
-      ? (this.page.viewController as UIViewController)
-      : null;
-
-    this.keyboardAccessoryManager.setup(
-      viewController,
-      inputContainerView,
-      this.nativeScrollView,
-      scrollViewView,
-      this.textView,
-    );
-  }
-
-  onScrollViewLoaded(args: any) {
-    const scrollView = args.object as ScrollView;
-    if (__APPLE__) {
-      this.nativeScrollView = scrollView.ios;
-    } else {
-      this.nativeScrollView = scrollView.android;
-    }
+    this.keyboardAccessoryManager.setup({
+      page: this.page,
+      scrollView: this.scrollView.nativeElement as ScrollView,
+      inputContainer: this.inputContainer.nativeElement as View,
+      textView: this.textView,
+      // baseHeight: 64
+    });
   }
 
   selectOption(args: MenuSelectedEvent) {
@@ -272,28 +259,18 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewInit {
   async initAssistant() {
     try {
       this.isLoading.set(true);
-      await this.copilotService.initialize();
+
+      // Pick the backend for this platform/device and initialize it.
+      this.engine ??= createAiEngine(this.copilotService);
+      this.engineName.set(this.engine.displayName);
+      await this.engine.initialize();
       this.isInitialized.set(true);
-
-      // Subscribe to streaming chunks
-      this.subscriptions.add(
-        this.copilotService.stream$.subscribe((chunk) => {
-          this.handleStreamChunk(chunk.content);
-        }),
-      );
-
-      // Subscribe to message completion
-      this.subscriptions.add(
-        this.copilotService.messageComplete$.subscribe(() => {
-          this.handleStreamComplete();
-        }),
-      );
 
       // Add welcome message
       this.addMessage({
         id: Date.now().toString(),
         role: "assistant",
-        content: `I'm an AI assistant powered by **GitHub Copilot SDK** and rendered with **@nstudio/streamdown**.
+        content: `I'm an AI assistant powered by **${this.engine.displayName}** and rendered with **@nstudio/streamdown**.
 
 ## What I can do:
 
@@ -315,12 +292,7 @@ Try the quick actions below or type your own message!`,
       this.addMessage({
         id: Date.now().toString(),
         role: "assistant",
-        content: `⚠️ **Error**: Failed to initialize GitHub Copilot SDK. 
-
-Please make sure you have:
-1. GitHub Copilot CLI installed
-2. Authenticated
-3. Internet connection
+        content: `⚠️ **Error**: Failed to initialize ${this.engine?.displayName ?? "the AI engine"}.
 
 ${error}`,
         isStreaming: false,
@@ -331,8 +303,7 @@ ${error}`,
   }
 
   ngOnDestroy() {
-    this.subscriptions.unsubscribe();
-    this.copilotService.cleanup();
+    this.engine?.cleanup();
 
     // Clean up keyboard accessory manager
     if (!this.keyboardAccessoryManager) return;
@@ -350,20 +321,8 @@ ${error}`,
 
   onTextViewLoaded(args: EventData) {
     this.textView = args.object as TextView;
-
-    if (__APPLE__) {
-      const nativeTextView = this.textView.ios as UITextView;
-
-      // Configure for auto-growing
-      nativeTextView.scrollEnabled = false; // Allows auto-sizing
-      nativeTextView.textContainerInset = new UIEdgeInsets({
-        top: 10,
-        left: 10,
-        bottom: 10,
-        right: 10,
-      });
-    }
-    // Note: Android EditText auto-grows by default with multiline input
+    // iOS UITextView configuration (scrollEnabled, textContainerInset)
+    // is handled by the @nativescript/input-accessory plugin in setup()
   }
 
   async sendMessage(customPrompt?: string) {
@@ -396,53 +355,32 @@ ${error}`,
 
     this.isLoading.set(true);
 
-    try {
-      // This just sends the message - response comes via stream events
-      await this.copilotService.sendMessage(text.trim());
-      // Note: isLoading stays true until handleStreamComplete is called
-    } catch (error) {
-      console.error("Error sending message:", error);
-      this.updateMessageContent(
-        this.currentStreamingMessageId,
-        `⚠️ **Error** ${error}`,
-        false,
-      );
-      this.isLoading.set(false); // Only set false on error
-    }
+    // Route through the active engine. Each engine streams the FULL
+    // accumulated content via onContent, so we just set it on the message.
+    const messageId = this.currentStreamingMessageId;
+    await this.engine.sendMessage(text.trim(), {
+      onContent: (content) => {
+        this.updateMessageContent(messageId, content, true);
+        this.scrollToBottom();
+      },
+      onComplete: () => {
+        this.updateMessageContent(
+          messageId,
+          this.messages().find((m) => m.id === messageId)?.content ?? "",
+          false,
+        );
+        this.isLoading.set(false);
+      },
+      onError: (error) => {
+        console.error("Error sending message:", error);
+        this.updateMessageContent(messageId, `⚠️ **Error** ${error}`, false);
+        this.isLoading.set(false);
+      },
+    });
   }
 
   onQuickPrompt(prompt: string) {
     this.sendMessage(prompt);
-  }
-
-  private handleStreamChunk(content: string) {
-    const messages = this.messages();
-    const currentMsg = messages.find(
-      (m) => m.id === this.currentStreamingMessageId,
-    );
-
-    if (currentMsg) {
-      currentMsg.content += content;
-      this.messages.set([...messages]);
-      this.scrollToBottom();
-      this.cdr.detectChanges();
-    }
-  }
-
-  private handleStreamComplete() {
-    const messages = this.messages();
-    const currentMsg = messages.find(
-      (m) => m.id === this.currentStreamingMessageId,
-    );
-
-    if (currentMsg) {
-      currentMsg.isStreaming = false;
-      this.messages.set([...messages]);
-      this.cdr.detectChanges();
-    }
-
-    // Stop loading when stream is complete
-    this.isLoading.set(false);
   }
 
   private addMessage(message: ChatMessage) {

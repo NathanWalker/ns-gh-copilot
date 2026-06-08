@@ -14,7 +14,7 @@
       <StackLayout col="1">
         <Label text="Assistant" class="text-white text-xl font-bold"></Label>
         <Label
-          text="GitHub Copilot × nstreamdown"
+          [text]="(engineName() || 'AI') + ' × nstreamdown'"
           class="text-blue-100 text-xs"
         ></Label>
       </StackLayout>
@@ -22,12 +22,7 @@
   </GridLayout>
 
   <!-- Messages Area -->
-  <ScrollView
-    row="1"
-    #scrollView
-    class="p-4 dark:bg-slate-900"
-    (loaded)="onScrollViewLoaded($event)"
-  >
+  <ScrollView row="1" #scrollView class="p-4 dark:bg-slate-900">
     <StackLayout (tap)="tapCloseKeyboard()">
       @if (isLoading() && messages().length === 0) {
         <StackLayout
@@ -181,53 +176,83 @@
       }"
     ></MenuImage>
 
-    <TextView
-      #messageInput
-      col="1"
-      colSpan="2"
-      [text]="inputText()"
-      (textChange)="onTextChange($event)"
-      (loaded)="onTextViewLoaded($event)"
-      hint="Ask me anything..."
-      style.placeholderColor="#94a3b8"
-      class="bg-slate-200/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-50 pl-4 pr-8 py-4 text-base align-bottom leading-[2]"
-      [class.rounded-3xl]="isMultiLine()"
-      [class.rounded-full]="!isMultiLine()"
-    >
-    </TextView>
+    <!-- Glass effect scoped to the input field only -->
+    @if (isApple) {
+      <LiquidGlass
+        col="1"
+        colSpan="2"
+        class="align-bottom"
+        [ngClass]="{
+          'rounded-3xl': isMultiline(),
+          'rounded-full': !isMultiline(),
+        }"
+      >
+        <TextView
+          #messageInput
+          [text]="inputText()"
+          (textChange)="onTextChange($event)"
+          (loaded)="onTextViewLoaded($event)"
+          hint="Ask me anything..."
+          style.placeholderColor="#94a3b8"
+          class="pl-4 pr-8 py-4 text-base text-slate-50 bg-transparent leading-[2]"
+          [ngClass]="{
+            'rounded-3xl': isMultiline(),
+            'rounded-full': !isMultiline(),
+          }"
+        >
+        </TextView>
+      </LiquidGlass>
+    } @else {
+      <TextView
+        #messageInput
+        col="1"
+        colSpan="2"
+        [text]="inputText()"
+        (textChange)="onTextChange($event)"
+        (loaded)="onTextViewLoaded($event)"
+        hint="Ask me anything..."
+        style.placeholderColor="#94a3b8"
+        class="pl-4 pr-8 py-4 text-base align-bottom leading-[2] bg-slate-200/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-50"
+        [ngClass]="{
+          'rounded-3xl': isMultiline(),
+          'rounded-full': !isMultiline(),
+        }"
+      >
+      </TextView>
+    }
 
     <GridLayout
-      col="2"
-      class="align-bottom"
-      [ngClass]="{
-        'mb-1 mr-1': isApple,
-        'mr-2': !isApple,
-      }"
-    >
-      @if (isApple) {
-        <Button
-          [text]="isLoading() ? '⋯' : '↑'"
-          [isEnabled]="!isLoading() && inputText().length > 0"
-          class="bg-blue-600 text-white rounded-full w-8 h-8 text-xl font-bold align-middle"
-          (tap)="sendMessage()"
-        >
-        </Button>
-      } @else {
-        <GridLayout
-          class="bg-blue-600 rounded-full align-middle"
-          [ngClass]="{
-            'w-8 h-8': isApple,
-            'w-10 h-10 mb-[5]': !isApple,
-          }"
-          (tap)="sendMessage()"
-        >
-          <Image
-            src="res://arrow_up"
-            class="w-6 h-6 align-middle"
-            tintColor="white"
-          ></Image>
-        </GridLayout>
-      }
-    </GridLayout>
+        col="2"
+        class="align-bottom"
+        [ngClass]="{
+          'mb-1 mr-1': isApple,
+          'mr-2': !isApple,
+        }"
+      >
+        @if (isApple) {
+          <Button
+            [text]="isLoading() ? '⋯' : '↑'"
+            [isEnabled]="!isLoading() && inputText().length > 0"
+            class="bg-blue-600 text-white rounded-full w-8 h-8 text-xl font-bold align-middle"
+            (tap)="sendMessage()"
+          >
+          </Button>
+        } @else {
+          <GridLayout
+            class="bg-blue-600 rounded-full align-middle"
+            [ngClass]="{
+              'w-8 h-8': isApple,
+              'w-10 h-10 mb-[5]': !isApple,
+            }"
+            (tap)="sendMessage()"
+          >
+            <Image
+              src="res://arrow_up"
+              class="w-6 h-6 align-middle"
+              tintColor="white"
+            ></Image>
+          </GridLayout>
+        }
+      </GridLayout>
   </GridLayout>
 </GridLayout>

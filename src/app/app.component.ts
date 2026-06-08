@@ -1,7 +1,9 @@
 import { Component, NO_ERRORS_SCHEMA } from '@angular/core';
+import { LiquidGlass } from '@nativescript/core'
 import { PageRouterOutlet, registerElement } from '@nativescript/angular';
 import { MenuButton, MenuImage } from '@nstudio/nativescript-menu';
 
+registerElement('LiquidGlass', () => LiquidGlass);
 registerElement('MenuImage', () => MenuImage);
 registerElement('MenuButton', () => MenuButton);
 

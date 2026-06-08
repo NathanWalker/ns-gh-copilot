@@ -22,9 +22,9 @@ registerElement('Shimmer', () => Shimmer);
 // Handle keyboard manually for chat UI
 if (__APPLE__) {
   Application.on(Application.launchEvent, () => {
-    const iqKeyboard = IQKeyboardManager.sharedManager();
+    const iqKeyboard = IQKeyboardManager.shared;
     iqKeyboard.enableAutoToolbar = false;
-    iqKeyboard.enable = false;
+    iqKeyboard.isEnabled = false;
   });
 }
 

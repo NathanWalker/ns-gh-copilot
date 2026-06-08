@@ -20,6 +20,8 @@ export interface StreamCallbacks {
 export interface AiEngine {
   /** Human readable name, used for the welcome message + header. */
   readonly displayName: string;
+  /** Avatar/branding image for this engine (NativeScript asset path). */
+  readonly icon: string;
   initialize(): Promise<void>;
   sendMessage(prompt: string, callbacks: StreamCallbacks): Promise<void>;
   cleanup(): void;
@@ -31,6 +33,7 @@ export interface AiEngine {
  */
 export class CopilotEngine implements AiEngine {
   readonly displayName = "GitHub Copilot";
+  readonly icon = "~/assets/gh-emoji.png";
 
   private subscriptions = new Subscription();
   private accumulated = "";
@@ -83,6 +86,7 @@ export class CopilotEngine implements AiEngine {
  */
 export class FoundationModelsEngine implements AiEngine {
   readonly displayName = "Apple Intelligence";
+  readonly icon = "~/assets/apple-foundation-models.png";
 
   /** True only where the native FoundationModels APIs are available. */
   static isSupported(): boolean {

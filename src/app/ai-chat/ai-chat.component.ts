@@ -56,10 +56,18 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewInit {
   );
   isLoading = signal(false);
   isInitialized = signal(false);
+  // True only while waiting for the first chunk — once content starts
+  // streaming into the bubble the shimmer placeholder should disappear.
+  isAwaitingResponse = computed(() => {
+    if (!this.isLoading()) return false;
+    const last = this.messages()[this.messages().length - 1];
+    return !!last && last.role === "assistant" && last.isStreaming && !last.content;
+  });
   selectedModel = signal("v0-max");
 
   // Active chat backend (GitHub Copilot or Apple Foundation Models).
   engineName = signal("");
+  assistantIcon = signal("~/assets/gh-emoji.png");
 
   page = inject(Page);
   addOptions = [
@@ -263,6 +271,7 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewInit {
       // Pick the backend for this platform/device and initialize it.
       this.engine ??= createAiEngine(this.copilotService);
       this.engineName.set(this.engine.displayName);
+      this.assistantIcon.set(this.engine.icon);
       await this.engine.initialize();
       this.isInitialized.set(true);
 
@@ -361,7 +370,8 @@ ${error}`,
     await this.engine.sendMessage(text.trim(), {
       onContent: (content) => {
         this.updateMessageContent(messageId, content, true);
-        this.scrollToBottom();
+        // Animate so the view glides with the stream instead of jumping.
+        this.scrollToBottom(true);
       },
       onComplete: () => {
         this.updateMessageContent(
@@ -403,11 +413,11 @@ ${error}`,
     }
   }
 
-  private scrollToBottom() {
+  private scrollToBottom(animated = false) {
     if (this.scrollView?.nativeElement) {
       const scrollView = this.scrollView.nativeElement as ScrollView;
       setTimeout(() => {
-        scrollView.scrollToVerticalOffset(scrollView.scrollableHeight, false);
+        scrollView.scrollToVerticalOffset(scrollView.scrollableHeight, animated);
       }, 50);
     }
   }

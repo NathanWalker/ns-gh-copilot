@@ -15,8 +15,8 @@ public class AI: NSObject {
     ///     a non-nil value is an error message.
     public func streamResponseFor(
         _ prompt: String,
-        onChunk: @escaping (String) -> Void,
-        onComplete: @escaping (String?) -> Void
+        _ onChunk: @escaping (String) -> Void,
+        _ onComplete: @escaping (String?) -> Void
     ) {
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
@@ -25,7 +25,9 @@ public class AI: NSObject {
                 do {
                     let stream = session.streamResponse(to: prompt)
                     for try await chunk in stream {
-                        await MainActor.run { onChunk(chunk) }
+                        // Each snapshot's `content` is the cumulative text so far.
+                        let text = chunk.content
+                        await MainActor.run { onChunk(text) }
                     }
                     await MainActor.run { onComplete(nil) }
                 } catch {

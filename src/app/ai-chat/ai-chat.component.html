@@ -6,7 +6,7 @@
   >
     <GridLayout rows="auto" columns="auto,*">
       <Image
-        src="~/assets/gh-emoji.png"
+        [src]="assistantIcon()"
         width="32"
         height="32"
         class="mr-3"
@@ -62,7 +62,7 @@
               columns="32"
               class="mr-2 h-[32] w-[32]"
             >
-              <Image src="~/assets/gh-emoji.png" width="22" height="22"></Image>
+              <Image [src]="assistantIcon()" width="22" height="22"></Image>
             </GridLayout>
 
             <!-- Message Bubble -->
@@ -70,16 +70,18 @@
               col="1"
               class="bg-white dark:bg-slate-800 rounded-2xl rounded-tl-sm p-4 shadow-md"
             >
-              <Streamdown
-                [content]="message.content"
-                [config]="getMessageConfig(message)"
-              ></Streamdown>
-
               @if (message.isStreaming) {
-                <Label
-                  text="●"
-                  class="text-blue-600 dark:text-blue-400 animate-pulse mt-2"
-                ></Label>
+                <Shimmer>
+                  <Streamdown
+                    [content]="message.content"
+                    [config]="getMessageConfig(message)"
+                  ></Streamdown>
+                </Shimmer>
+              } @else {
+                <Streamdown
+                  [content]="message.content"
+                  [config]="getMessageConfig(message)"
+                ></Streamdown>
               }
             </StackLayout>
           </GridLayout>
@@ -87,7 +89,7 @@
       }
 
       <!-- Loading Indicator with Shimmer -->
-      @if (isLoading() && messages().length > 0) {
+      @if (isAwaitingResponse()) {
         <GridLayout columns="32, *" class="mb-4">
           <GridLayout
             col="0"
